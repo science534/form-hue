@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ISA INTERSTELLAR MODE</title>
+<style>
+body{margin:0;overflow:hidden;background:black;}
+canvas{display:block;}
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://threejs.org/examples/js/loaders/FontLoader.js"></script>
+<script src="https://threejs.org/examples/js/geometries/TextGeometry.js"></script>
+
+<script>
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 20000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000);
+document.body.appendChild(renderer.domElement);
+
+/* LIGHT */
+const light = new THREE.PointLight(0xffffff,4);
+light.position.set(500,500,500);
+scene.add(light);
+
+/* STARFIELD */
+const starGeo = new THREE.BufferGeometry();
+const starCount = 12000;
+const starPos = new Float32Array(starCount*3);
+
+for(let i=0;i<starCount*3;i++){
+    starPos[i] = (Math.random()-0.5)*15000;
+}
+starGeo.setAttribute("position", new THREE.BufferAttribute(starPos,3));
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff,size:1}));
+scene.add(stars);
+
+/* BLACK HOLE CORE */
+const hole = new THREE.Mesh(
+    new THREE.SphereGeometry(200,64,64),
+    new THREE.MeshBasicMaterial({color:0x000000})
+);
+scene.add(hole);
+
+/* ACCRETION DISK */
+const disk1 = new THREE.Mesh(
+    new THREE.TorusGeometry(400,80,32,300),
+    new THREE.MeshBasicMaterial({color:0xffaa00})
+);
+disk1.rotation.x = Math.PI/2;
+scene.add(disk1);
+
+const disk2 = new THREE.Mesh(
+    new THREE.TorusGeometry(420,60,32,300),
+    new THREE.MeshBasicMaterial({color:0xffffff})
+);
+disk2.rotation.x = Math.PI/2;
+scene.add(disk2);
+
+let textMeshes=[];
+let phase=0;
+let holdTime=0;
+
+const loader=new THREE.FontLoader();
+loader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',function(font){
+
+    const mat=new THREE.MeshStandardMaterial({
+        color:0x00ffff,
+        emissive:0x0088ff,
+        metalness:0.8,
+        roughness:0.2
+    });
+
+    const lines=[
+        {t:"Welcome to",y:180},
+        {t:"ISA Community",y:0},
+        {t:"Indonesian Space Astronomy",y:-180}
+    ];
+
+    lines.forEach(l=>{
+        const geo=new THREE.TextGeometry(l.t,{
+            font:font,
+            size:50,
+            height:15
+        });
+        geo.center();
+        const mesh=new THREE.Mesh(geo,mat);
+        mesh.position.set(0,l.y,-6000);
+        scene.add(mesh);
+        textMeshes.push(mesh);
+    });
+
+    animate();
+});
+
+function animate(){
+requestAnimationFrame(animate);
+
+/* Rotations */
+stars.rotation.z += 0.0003;
+disk1.rotation.z += 0.01;
+disk2.rotation.z -= 0.02;
+
+/* PHASE 0 – TEXT DATANG SLOW */
+if(phase===0){
+    textMeshes.forEach(m=>{
+        if(m.position.z < 0){
+            m.position.z += 8; // lebih pelan
+        }
+    });
+
+    if(textMeshes[0] && textMeshes[0].position.z >= 0){
+        phase=1;
+    }
+}
+
+/* PHASE 1 – RETAK EFFECT */
+else if(phase===1){
+    holdTime++;
+
+    textMeshes.forEach(m=>{
+        m.rotation.y += 0.005;
+
+        // glitch crack effect
+        m.position.x = Math.sin(holdTime*0.2)*5;
+        m.position.y += Math.sin(holdTime*0.15)*0.5;
+
+        m.material.emissiveIntensity = 2 + Math.sin(holdTime*0.3)*2;
+    });
+
+    if(holdTime > 400){ // retak 6 detik
+        phase=2;
+        holdTime=0;
+    }
+}
+
+/* PHASE 2 – NYATU + HOLD LAMA */
+else if(phase===2){
+    holdTime++;
+
+    textMeshes.forEach(m=>{
+        m.position.x *= 0.9; // stabil
+        m.rotation.y *= 0.95;
+        m.material.emissiveIntensity = 4;
+    });
+
+    if(holdTime > 1200){ // ±20 detik tampil
+        phase=3;
+    }
+}
+
+/* PHASE 3 – SUCTION */
+else if(phase===3){
+    textMeshes.forEach(m=>{
+        m.position.z -= 10; // disedot
+        m.scale.multiplyScalar(0.99);
+    });
+}
+
+renderer.render(scene,camera);
+}
+
+camera.position.z = -5000;
+
+window.addEventListener("resize",()=>{
+camera.aspect=window.innerWidth/window.innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+</script>
+</body>
+</html>
